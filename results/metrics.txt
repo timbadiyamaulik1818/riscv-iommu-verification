@@ -1,0 +1,7 @@
+IP: 75 files, 25778 lines
+testbench: 1097 lines
+tooling: 121 lines
+checks: 55
+build: 2.4 s
+sim median of 5: 5 ms
+testbench(final): 1144 lines

@@ -1,0 +1,139 @@
+[
+ {
+  "id": "M1",
+  "desc": "first-stage PTE valid bit ignored",
+  "status": "DETECTED",
+  "n_fail": 1,
+  "checks": [
+   "T13e PTE with V=0 faults"
+  ]
+ },
+ {
+  "id": "M2",
+  "desc": "PTE accessed bit ignored",
+  "status": "DETECTED",
+  "n_fail": 1,
+  "checks": [
+   "T13a PTE with A=0 faults"
+  ]
+ },
+ {
+  "id": "M3",
+  "desc": "PTE dirty bit ignored on stores",
+  "status": "DETECTED",
+  "n_fail": 1,
+  "checks": [
+   "T13b PTE with D=0 faults on a write"
+  ]
+ },
+ {
+  "id": "M4",
+  "desc": "PTE user bit ignored (2nd stage)",
+  "status": "DETECTED",
+  "n_fail": 1,
+  "checks": [
+   "T14b G-stage PTE with U=0 faults"
+  ]
+ },
+ {
+  "id": "M5",
+  "desc": "PTE reserved-bit check removed",
+  "status": "DETECTED",
+  "n_fail": 1,
+  "checks": [
+   "T13d PTE with a reserved bit set faults"
+  ]
+ },
+ {
+  "id": "M6",
+  "desc": "ddtp=Off no longer blocks transactions",
+  "status": "DETECTED",
+  "n_fail": 2,
+  "checks": [
+   "T12c ddtp=Off disallows all transactions",
+   "T12c no transaction reached the completion port"
+  ]
+ },
+ {
+  "id": "M7",
+  "desc": "ddtp=Bare decoded as a normal mode",
+  "status": "DETECTED",
+  "n_fail": -1,
+  "checks": [
+   "NO_RESULT"
+  ]
+ },
+ {
+  "id": "M8",
+  "desc": "first-stage enable inverted",
+  "status": "DETECTED",
+  "n_fail": 26,
+  "checks": [
+   "T2 identity translation (both stages Bare)",
+   "T5 translated address matches golden model",
+   "T5 walk touched DDT + 3 page-table levels",
+   "T6 translated correctly from cache",
+   "T7 IOTLB returns the OLD mapping (no invalidation yet) got=0x0000000012345100 expected stale 0x0000000080035100",
+   "T8 access after invalidation re-walks",
+   "T8 new mapping now visible",
+   "T9 no stale translation after IOFENCE.C completion got=0x0000000012345300 expected 0x0000000080037300",
+   "T10 32 randomised translations match golden model 0/32 correct",
+   "T11 write address translated",
+   "T11b faulting write is reported as an error",
+   "T12b unmapped IOVA aborts",
+   "T12b no transaction reached the completion port",
+   "T12z IOMMU still translates after the fault tests ddtp=0x0000000020004002 rresp=0 walk=0 got=0x0000000012345300",
+   "T13a PTE with A=0 faults",
+   "T13b PTE with D=0 faults on a write",
+   "T13c PTE with U=0 faults (first stage)",
+   "T13d PTE with a reserved bit set faults",
+   "T13e PTE with V=0 faults",
+   "T14a second-stage translation completes",
+   "T14a GPA translated to the expected SPA",
+   "T14a walk touched DDT + G-stage levels",
+   "T15a address-scoped invalidation refreshes the named page got=0x0000000040000000 expected 0x000000008005a000",
+   "T15b other pages are not invalidated by a scoped command got=0x0000000040010000 expected still-cached 0x0000000080059000",
+   "T15c invalidate-all refreshes every cached page after IOFENCE.C 0/4 refreshed",
+   "T17 precondition: translation works before the experiment rresp=0 got=0x0000000012345300"
+  ]
+ },
+ {
+  "id": "M9",
+  "desc": "IOTLB invalidation does not clear the entry",
+  "status": "DETECTED",
+  "n_fail": 6,
+  "checks": [
+   "T8 access after invalidation re-walks",
+   "T8 new mapping now visible",
+   "T9 no stale translation after IOFENCE.C completion got=0x0000000080035300 expected 0x0000000080037300",
+   "T13b PTE with D=0 faults on a write",
+   "T15c invalidate-all refreshes every cached page after IOFENCE.C 0/4 refreshed",
+   "T16 no stale translation after fence completion 19 stale of 19 post-fence accesses"
+  ]
+ },
+ {
+  "id": "M10",
+  "desc": "command queue head never advances",
+  "status": "DETECTED",
+  "n_fail": 5,
+  "checks": [
+   "T8 command queue drained after IOTINVAL",
+   "T9 IOFENCE.C wrote its completion word",
+   "T15b other pages are not invalidated by a scoped command got=0x000000008005b000 expected still-cached 0x0000000080059000",
+   "T15c invalidate-all refreshes every cached page after IOFENCE.C 0/4 refreshed",
+   "T16 no stale translation after fence completion 21 stale of 21 post-fence accesses"
+  ]
+ },
+ {
+  "id": "M11",
+  "desc": "invalidate-all clears only the first IOTLB entry",
+  "status": "DETECTED",
+  "n_fail": 4,
+  "checks": [
+   "T9 no stale translation after IOFENCE.C completion got=0x0000000080036300 expected 0x0000000080037300",
+   "T13b PTE with D=0 faults on a write",
+   "T15c invalidate-all refreshes every cached page after IOFENCE.C 1/4 refreshed",
+   "T16 no stale translation after fence completion 19 stale of 19 post-fence accesses"
+  ]
+ }
+]

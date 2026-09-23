@@ -1,0 +1,18 @@
+
+=== RISC-V IOMMU verification environment ===
+  PASS  T1 capabilities.version readable               caps[7:0]=0x10 (spec v1.0 => 0x10)
+  PASS  T2 ddtp programmed to 1LVL before traffic      ddtp=0x0000000020004002 busy=0
+  PASS  T2 device read completes (1LVL)                rresp=0
+  PASS  T2 IOMMU walked the DDT                        ds reads=1, last=0x0000000080010060 expect 0x0000000080010060
+  PASS  T2 identity translation (both stages Bare)     translated=0x0000000080030000
+  DBG   before reprogram: ddtp=0x0000000020004002 busy=0
+  PASS  T3 ddtp reprogrammable after traffic (Bare)    ddtp=0x0000000000000001 busy=0
+  PASS  T3 device read completes (Bare)                rresp=0
+  PASS  T3 Bare performs no DDT walk                   ds reads=0
+  PASS  T3 address passed through untranslated         translated=0x0000000080020000
+  PASS  T4 32-bit write to a 32-bit register takes effect fctl=0x00000006 after 4-byte write
+  PASS  T4 64-bit write to the same register takes effect fctl=0x00000006 after 8-byte write
+  PASS  T4 write after a sub-word access is uncorrupted ddtp=0x0000000000000001 (expected mode=1)
+
+=== 12 passed, 0 failed ===
+

@@ -1,0 +1,67 @@
+
+=== RISC-V IOMMU verification environment ===
+  PASS  T1 capabilities.version readable               caps[7:0]=0x10 (spec v1.0 => 0x10)
+  PASS  T2 ddtp programmed to 1LVL before traffic      ddtp=0x0000000020004002 busy=0
+  PASS  T2 device read completes (1LVL)                rresp=0
+  PASS  T2 IOMMU walked the DDT                        ds reads=1, last=0x0000000080010060 expect 0x0000000080010060
+  PASS  T2 identity translation (both stages Bare)     translated=0x0000000080030000
+  PASS  T3 ddtp reprogrammable after traffic (Bare)    ddtp=0x0000000000000001 busy=0
+  PASS  T3 device read completes (Bare)                rresp=0
+  PASS  T3 Bare performs no DDT walk                   ds reads=0
+  PASS  T3 address passed through untranslated         translated=0x0000000080020000
+  PASS  T5 Sv39 read completes                         rresp=0
+  PASS  T5 translated address matches golden model     got=0x0000000080035678 golden=0x0000000080035678
+  PASS  T5 walk touched DDT + 3 page-table levels      ds reads=4
+  PASS  T6 second access to same page completes        rresp=0
+  PASS  T6 translated correctly from cache             got=0x0000000080035abc
+  PASS  T6 IOTLB hit avoided a page-table walk         ds reads=0 (expected 0)
+  PASS  T7 access after page-table change still completes rresp=0
+  PASS  T7 IOTLB returns the OLD mapping (no invalidation yet) got=0x0000000080035100 expected stale 0x0000000080035100
+  PASS  T8 command queue drained after IOTINVAL        cqt=1
+  PASS  T8 access after invalidation re-walks          ds reads=3
+  PASS  T8 new mapping now visible                     got=0x0000000080036200 expected 0x0000000080036200
+  PASS  T9 IOFENCE.C wrote its completion word         mem[FENCE_ADDR]=0x00000000f00dbeef after 12 cycles
+  PASS  T9 no stale translation after IOFENCE.C completion got=0x0000000080037300 expected 0x0000000080037300
+  PASS  T10 32 randomised translations match golden model 32/32 correct
+  PASS  T11 device write completes                     bresp=0
+  PASS  T11 write address translated                   got=0x0000000080037400
+  PASS  T11b faulting write returns a B response       b_beats 1 -> 2, bresp=2, reached_completion=0
+  PASS  T11b faulting write is reported as an error    bresp=2
+  PASS  T11b faulting read returns an R response       rresp=2
+  PASS  T11b faults are recorded in the fault queue    fqt=1, first record cause=0x00f
+  PASS  T12a invalid device context aborts             rresp=2
+  PASS  T12a no transaction reached the completion port 
+  PASS  T12b unmapped IOVA aborts                      rresp=2
+  PASS  T12b no transaction reached the completion port 
+  PASS  T12c ddtp=Off disallows all transactions       rresp=2
+  PASS  T12c no transaction reached the completion port 
+  PASS  T12z IOMMU still translates after the fault tests ddtp=0x0000000020004002 rresp=0 walk=3 got=0x0000000080037300
+  PASS  T13a PTE with A=0 faults                       rresp=2 reached_completion=0
+  PASS  T13b PTE with D=0 allows a read                rresp=0
+  PASS  T13b PTE with D=0 faults on a write            bresp=2 reached_completion=0
+  PASS  T13c PTE with U=0 faults (first stage)         rresp=2 reached_completion=0 translated=0x0000000080037400
+  PASS  T13d PTE with a reserved bit set faults        rresp=2 reached_completion=0
+  PASS  T13e PTE with V=0 faults                       rresp=2 reached_completion=0
+  PASS  T14a second-stage translation completes        rresp=0
+  PASS  T14a GPA translated to the expected SPA        got=0x0000000080070500 expected 0x0000000080070500
+  PASS  T14a walk touched DDT + G-stage levels         ds reads=4
+  PASS  T14b G-stage PTE with U=0 faults               rresp=2 reached_completion=0 translated=0x0000000080037400
+  PASS  T15a address-scoped invalidation refreshes the named page got=0x000000008005a000 expected 0x000000008005a000
+  PASS  T15b other pages are not invalidated by a scoped command got=0x0000000080059000 expected still-cached 0x0000000080059000
+  PASS  T15c invalidate-all refreshes every cached page after IOFENCE.C 4/4 refreshed
+  PASS  T16 fence completed during concurrent traffic  waited 12 cycles
+  PASS  T16 accesses were observed after fence completion 20 post-fence accesses
+  PASS  T16 no stale translation after fence completion 0 stale of 20 post-fence accesses
+  PASS  T4 32-bit write to a 32-bit register takes effect fctl=0x00000006 after 4-byte write
+  PASS  T4 64-bit write to the same register takes effect fctl=0x00000006 after 8-byte write
+  PASS  T4 write after a sub-word access is uncorrupted ddtp=0x0000000000000001 (expected mode=1)
+  PASS  T17 precondition: translation works before the experiment rresp=0 got=0x0000000080037300
+  ISSUE T17a IOMMU stops responding when the FQ is disabled only 4 of 8 faulting accesses received a response
+  ISSUE T17b a valid translation fails after those faults rresp=2 got=0x0000000080037400 (expected 0x0000000080037300)
+
+=== 56 passed, 0 failed, 2 known issue(s) ===
+
+- /Users/mauliktimbadiya/dev/riscv-iommu-dv/tb/tb_iommu.sv:1135: Verilog $finish
+- S i m u l a t i o n   R e p o r t: Verilator 5.052 2026-09-05
+- Verilator: $finish at 371us; walltime 0.024 s; speed 15.731 ms/s
+- Verilator: cpu 0.024 s on 1 threads; allocated 3 MB

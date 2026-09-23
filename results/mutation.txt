@@ -1,0 +1,30 @@
+MUTATION-BASED EVALUATION
+
+baseline: 56 checks, 0 failures
+
+id    status     fails  description
+M1    DETECTED   1      first-stage PTE valid bit ignored
+M2    DETECTED   1      PTE accessed bit ignored
+M3    DETECTED   1      PTE dirty bit ignored on stores
+M4    DETECTED   1      PTE user bit ignored (2nd stage)
+M5    DETECTED   1      PTE reserved-bit check removed
+M6    DETECTED   2      ddtp=Off no longer blocks transactions
+M7    DETECTED   -1     ddtp=Bare decoded as a normal mode
+M8    DETECTED   26     first-stage enable inverted
+M9    DETECTED   6      IOTLB invalidation does not clear the entry
+M10   DETECTED   5      command queue head never advances
+M11   DETECTED   4      invalidate-all clears only the first IOTLB entry
+
+mutation score: 11/11 detected
+
+M1 caught by: T13e PTE with V=0 faults
+M2 caught by: T13a PTE with A=0 faults
+M3 caught by: T13b PTE with D=0 faults on a write
+M4 caught by: T14b G-stage PTE with U=0 faults
+M5 caught by: T13d PTE with a reserved bit set faults
+M6 caught by: T12c ddtp=Off disallows all transactions, T12c no transaction reached the completion port
+M7 caught by: NO_RESULT
+M8 caught by: T2 identity translation (both stages Bare), T5 translated address matches golden model, T5 walk touched DDT + 3 page-table levels, T6 translated correctly from cache
+M9 caught by: T8 access after invalidation re-walks, T8 new mapping now visible, T9 no stale translation after IOFENCE.C completion got=0x0000000080035300 expected 0x0000000080037300, T13b PTE with D=0 faults on a write
+M10 caught by: T8 command queue drained after IOTINVAL, T9 IOFENCE.C wrote its completion word, T15b other pages are not invalidated by a scoped command got=0x000000008005b000 expected still-cached 0x0000000080059000, T15c invalidate-all refreshes every cached page after IOFENCE.C 0/4 refreshed
+M11 caught by: T9 no stale translation after IOFENCE.C completion got=0x0000000080036300 expected 0x0000000080037300, T13b PTE with D=0 faults on a write, T15c invalidate-all refreshes every cached page after IOFENCE.C 1/4 refreshed, T16 no stale translation after fence completion 19 stale of 19 post-fence accesses
