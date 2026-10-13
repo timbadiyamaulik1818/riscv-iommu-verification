@@ -432,6 +432,10 @@ module tb_iommu
 
   // ---------------- scoreboard ----------------
   int unsigned pass_n = 0, fail_n = 0, known_n = 0;
+  // Suite level, for the fixed-fault-set ablation in the article: 1 = core
+  // functional checks only, 2 = + permission / second stage, 3 = everything.
+  // Defaults to the full suite; +SUITE=<n> selects a subset.
+  int suite_lvl = 3;
   // Observed deviations that are reported but kept out of the pass/fail total,
   // so the suite remains a clean baseline for fault injection.
   task automatic known_issue(input string name, input string detail);
@@ -668,8 +672,13 @@ module tb_iommu
     rst_n = 1'b1;
     repeat (5) @(posedge clk);
 
+    void'($value$plusargs("SUITE=%d", suite_lvl));
+
     $display("");
-    $display("=== RISC-V IOMMU verification environment ===");
+    $display("=== RISC-V IOMMU verification environment (suite level %0d) ===",
+             suite_lvl);
+
+    begin : tests
 
     // T1: programming interface is alive and capabilities readable
     prog_read32(64'h0 + rv_iommu_reg_pkg::IOMMU_CAPABILITIES_OFFSET_L, rd);
@@ -891,6 +900,8 @@ module tb_iommu
           $sformatf("ddtp=0x%016h rresp=%0d walk=%0d got=0x%016h",
                     rd64, rresp, ds_reads - ds_before, comp_addr()));
 
+    if (suite_lvl < 2) disable tests;
+
     // ---- T13: per-PTE permission and reserved-bit enforcement -------------
     // A=0 must fault
     map_4k_raw(64'h0000_0000_2000_0000, mk_pte(64'h8005_0000 >> 12, 10'b00_1001_0111));
@@ -960,6 +971,8 @@ module tb_iommu
           $sformatf("rresp=%0d reached_completion=%0b translated=0x%016h",
                     rresp, comp_happened(), comp_addr()));
     fq_drain();
+
+    if (suite_lvl < 3) disable tests;
 
     // ---- T15: invalidation scope and fence ordering -----------------------
     // O1: address-scoped IOTINVAL.VMA must invalidate only the named page.
@@ -1128,6 +1141,8 @@ module tb_iommu
       fq_drain();
     end
 
+
+    end : tests
 
     $display("");
     $display("=== %0d passed, %0d failed, %0d known issue(s) ===", pass_n, fail_n, known_n);

@@ -44,32 +44,36 @@ c.drawCentredString(258,20,'every arrow is an AXI4 channel pair; the golden mode
 c.save()
 
 # ---------------- A2: mutation trajectory ----------------
-stages=[('initial suite\n(34 checks)',4,9,'permission bits,\nreserved bits and\nsecond stage untested'),
-        ('+ permission and\nreserved-bit tests\n(44 checks)',8,10,'invalid PTE and\nG-stage still untested'),
-        ('+ invalid-PTE and\ntwo-stage tests\n(55 checks)',11,11,'all injected faults\ndetected')]
-c=cv('figA2_mutation.pdf',516,190)
-x0,y0,w,h=54,54,300,108
+levels=[('level 1\ncore functional\n(36 checks)',6,'permission, reserved-bit\nand second-stage faults\nall survive'),
+        ('level 2\n+ permission,\nsecond stage\n(46 checks)',11,'every fault in the\nset is detected'),
+        ('level 3\n+ ordering, scope,\nconcurrency\n(56 checks)',11,'no further gain: only\n2 of 11 faults concern\ninvalidation')]
+NF=11
+c=cv('figA2_mutation.pdf',516,200)
+x0,y0,w,h=58,60,300,106
 c.setStrokeColor(GRID); c.setLineWidth(0.4)
 for v in (0,25,50,75,100):
-    yy=y0+v/100*h; c.line(x0,yy,x0+w,yy)
+    yy=y0+v/100.0*h; c.line(x0,yy,x0+w,yy)
 c.setStrokeColor(black); c.setLineWidth(0.8); c.line(x0,y0,x0,y0+h); c.line(x0,y0,x0+w,y0)
 c.setFont('Helvetica',6.2); c.setFillColor(GREY)
-for v in (0,25,50,75,100): c.drawRightString(x0-3,y0+v/100*h-2,f'{v}%')
+for v in (0,25,50,75,100): c.drawRightString(x0-3,y0+v/100.0*h-2,'%d%%'%v)
 c.setFillColor(black)
-bw=52
-for i,(lab,d,t,note) in enumerate(stages):
-    xx=x0+34+i*94; pct=100.0*d/t; bh=pct/100*h
-    c.setFillColor(FILL); c.rect(xx,y0,bw,bh,stroke=0,fill=1); c.setFillColor(black)
-    c.setLineWidth(1.0); c.rect(xx,y0,bw,bh,stroke=1,fill=0)
-    c.setFont('Helvetica-Bold',7); c.drawCentredString(xx+bw/2,y0+bh+5,f'{d}/{t}')
-    c.setFont('Helvetica',5.9)
-    for j,l in enumerate(lab.split('\n')): c.drawCentredString(xx+bw/2,y0-10-j*7,l)
-    c.setFont('Helvetica-Oblique',5.6); c.setFillColor(GREY)
-    for j,l in enumerate(note.split('\n')): c.drawString(x0+w+12,y0+bh-4-j*7,l)
+bw=54
+for i,(lab,d,note) in enumerate(levels):
+    cx=x0+w*(i+0.5)/3.0
+    frac=d/float(NF)
+    c.setFillColor(FILL); c.rect(cx-bw/2,y0,bw,frac*h,stroke=0,fill=1)
+    c.setFillColor(black); c.setLineWidth(0.9); c.rect(cx-bw/2,y0,bw,frac*h,stroke=1,fill=0)
+    c.setFont('Helvetica-Bold',7.4)
+    c.drawCentredString(cx,y0+frac*h+5,'%d/%d'%(d,NF))
+    c.setFont('Helvetica',6.2)
+    for j,l in enumerate(lab.split('\n')): c.drawCentredString(cx,y0-11-j*7.4,l)
+    c.setFont('Helvetica-Oblique',5.9); c.setFillColor(GREY)
+    for j,l in enumerate(note.split('\n')): c.drawString(x0+w+16,y0+h-14-i*34-j*7.2,l)
     c.setFillColor(black)
-c.setFont('Helvetica',6.6)
-c.saveState(); c.translate(x0-26,y0+h/2); c.rotate(90)
-c.drawCentredString(0,0,'injected faults detected'); c.restoreState()
+c.setFont('Helvetica',6.4)
+c.drawString(x0-34,y0+h+16,'detected, out of a FIXED set of 11 injected faults')
+c.setFont('Helvetica-Oblique',6.0)
+c.drawCentredString(258,14,'the same 11 faults at every level; the suites are nested, so this is an ablation, not a history')
 c.save()
 
 # ---------------- A3: checks by category ----------------

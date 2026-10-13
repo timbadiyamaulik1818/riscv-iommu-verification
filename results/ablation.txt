@@ -1,0 +1,12 @@
+FIXED-FAULT-SET ABLATION
+
+fault set: 11 mutants, identical at every level
+
+suite level  checks  detected   survived
+1            36      6/11       M1, M2, M3, M4, M5
+2            46      11/11       -
+3            56      11/11       -
+
+level 1 survivors: M1, M2, M3, M4, M5
+level 2 survivors: none
+level 3 survivors: none

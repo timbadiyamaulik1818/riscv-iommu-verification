@@ -26,7 +26,9 @@ fault queue disabled, four of eight faulting transactions go unanswered and a
 subsequent valid translation then fails.
 
 Eleven single-line defects are injected into a private copy of the RTL to
-measure whether the suite would catch them. All eleven are detected.
+measure whether the suite would catch them. The full suite detects all eleven;
+the core functional subset detects six, and the five it misses are the
+page-table permission, reserved-bit and second-stage faults.
 
 ## Running it
 
@@ -35,9 +37,15 @@ Verilator 5.052.
 
 ```sh
 git clone https://github.com/zero-day-labs/riscv-iommu ext/riscv-iommu
-./run.sh              # build + run the suite          (~1 minute)
-./run.sh --mutate     # also rerun it per injected defect (~10 minutes)
+./run.sh              # build + run the suite             (~1 minute)
+./run.sh --mutate     # rerun it per injected defect      (~10 minutes)
+./run.sh --ablate     # 3 suite levels x 11 faults        (~15 minutes)
 ```
+
+The suite runs at three nested levels, selected with `+SUITE=<1|2|3>`: core
+functional checks (36), plus permission and second-stage tests (46), plus
+ordering, scope and concurrency tests (56). The ablation measures all three
+against the same fixed set of eleven faults, so the denominator does not move.
 
 Output lands in `results/` as `suite.txt` and `mutation.txt`. To regenerate the
 figures and rebuild the documents:
@@ -52,7 +60,11 @@ cd docs && python3 make_figures.py && tectonic -X compile articleA.tex
 tb/tb_iommu.sv       the environment: AXI drivers for all four interfaces,
                      the memory image the IOMMU walks, a golden translation
                      model, and the scoreboard
+tb/tb_smoke.sv       a minimal elaboration check: can the IP be built at all?
+                     This is what established that it cannot be linted as
+                     published (see the note below)
 tools/mutate.py      fault-injection harness
+tools/ablation.py    the same faults against all three suite levels
 deps/                a shim supplying the one header the IP includes but
                      does not vendor (see below)
 docs/                LaTeX sources, figure generator, built PDFs

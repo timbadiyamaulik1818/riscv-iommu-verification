@@ -31,9 +31,10 @@ command and fault-queue accesses from a memory model, and check every
 translation against an independent software walker. It builds in 2.4~s and runs
 56 checks in 5~ms under Verilator. We evaluate the environment by injecting
 eleven semantically meaningful IOMMU defects into the RTL. An early suite
-detected four of nine; the survivors named concrete blind spots---page-table
+detects six of eleven against a fixed fault set; the survivors name concrete
+blind spots---page-table
 permission bits, reserved-bit encodings, second-stage translation---and tests
-written to close them raised detection to eleven of eleven. We report two
+written to close them raise detection to eleven of eleven. We report two
 findings about the IP, including that with the fault queue disabled a faulting
 device leaves the IOMMU unresponsive, and one about methodology: a
 protocol-violating bus driver in our own testbench manufactured three plausible
@@ -50,15 +51,21 @@ emits and enforces the permissions of the domain that owns it. A defect in it is
 a containment failure. The RISC-V IOMMU specification is now at version~1.0 and
 open implementations exist, the most complete being the IP published by Zero-Day
 Labs~\cite{rviommu}, whose own documentation states it ``is not formally
-verified'' and is ``very likely to have bugs.'' It ships no testbench; its
-makefile runs Verilator in \texttt{--lint-only} mode.
+verified'' and is ``very likely to have bugs.'' Its repository ships no
+testbench; its makefile runs Verilator in \texttt{--lint-only} mode.
 
 Verification of RISC-V \emph{cores} is well served~\cite{riscvdv,corevverif},
 and address-translation \emph{ordering} has been studied for CPU
-MMUs~\cite{coatcheck,transform,rtlcheck}, but we are not aware of published work
-on verifying a RISC-V IOMMU. This paper reports what building such an
-environment takes, and measures how much of the device it exercises by injecting
-defects rather than by counting coverage.
+MMUs~\cite{coatcheck,transform,rtlcheck}. IOMMU verification itself is not
+untouched: Zero-Day Labs and 10xEngineers reported a collaborative effort on
+this IP at the RISC-V Summit in 2024, with 85\,\% of coverage targets met and
+several RTL defects found~\cite{zdl10x}, and standalone IOMMU verification with
+a reference model has been published for the Elbrus-6
+processor~\cite{elbrus}. Neither environment is obtainable: the former is not
+public as far as we can determine, the latter targets a proprietary device. That
+is the gap this paper fills. It reports what building a runnable environment
+takes, and measures how much of the device it exercises by injecting defects
+rather than by counting coverage.
 
 \section{Background}
 A device issues a transaction carrying a device identifier. The IOMMU walks a
@@ -215,22 +222,29 @@ M11 & invalidate-all clears only the first entry & yes \\
 \begin{figure}[!t]
 \centering
 \includegraphics[width=\columnwidth]{figures/figA2_mutation.pdf}
-\caption{Detection as the suite grew. The surviving defects named the blind
-spots; the tests written to close them raised detection.}
+\caption{Detection measured against a fixed set of eleven faults. The suites
+are nested, so this is an ablation rather than a history. Level~3 adds no
+detection, which reflects the composition of the fault set.}
 \label{fig:mut}
 \end{figure}
 
 Each defect is one scripted edit to a private copy of the RTL; the suite is
 rebuilt and rerun, and a defect counts as detected if any check fails.
 Table~\ref{tab:mutants} gives the final result. The trajectory in
-Fig.~\ref{fig:mut} is the useful part: the first suite of 34 checks detected
-four of nine usable defects, and the survivors were systematic rather than
-random---every page-table permission defect survived because our entries always
-set the accessed, dirty and user bits; the reserved-bit defect survived because
-we never set reserved bits; the second-stage defect survived because every test
-left the second stage in \texttt{Bare} mode. Tests for those behaviours raised
-detection to eleven of eleven. All 34 original checks passed on the unmodified
-RTL and would have passed on an RTL missing every page-table permission check.
+Fig.~\ref{fig:mut} is the useful part, and it is measured against a \emph{fixed}
+fault set: quoting detection at each stage against the fault set as it then
+stood would move the denominator. The suite's stages are nested, so we re-run
+each against all eleven faults. The core functional suite (36 checks) detects
+six. The survivors are systematic rather than random---every page-table
+permission defect survives because the core entries always set the accessed,
+dirty and user bits; the reserved-bit defect survives because they never set
+reserved bits; the second-stage defect survives because they leave the second
+stage in \texttt{Bare} mode. Adding tests for those behaviours (46 checks)
+detects all eleven. The ordering and concurrency tests (56 checks) add no
+further detection, which says more about the fault set---only two faults concern
+invalidation, and both are caught by the core suite---than about those tests.
+All 36 core checks passed on the unmodified RTL and would have passed on an RTL
+missing every page-table permission check.
 
 \section{Findings}
 
@@ -287,15 +301,21 @@ applied to our own drivers would have saved more time still.
 \begin{thebibliography}{9}
 \bibitem{rviommu} Zero-Day Labs, ``RISC-V IOMMU IP,'' commit \texttt{18ad30a}.
 [Online]. Available: \url{https://github.com/zero-day-labs/riscv-iommu}
+\bibitem{zdl10x} M.~Rodriguez (Zero-Day Labs) and S.~Waheed (10xEngineers),
+``Open-source commercial-grade RISC-V IOMMU with verification,'' RISC-V Summit
+North America, 2024.
+\bibitem{elbrus} A.~A.~Petrykin, I.~A.~Stotland, and A.~N.~Meshkov, ``Standalone
+verification of IOMMU with virtualization supporting,'' \emph{Proc. Institute
+for System Programming of the RAS}, vol.~31, no.~3, pp.~77--84, 2019.
 \bibitem{riscvdv} CHIPS Alliance, ``riscv-dv.'' [Online]. Available:
 \url{https://github.com/chipsalliance/riscv-dv}
 \bibitem{corevverif} OpenHW Group, ``core-v-verif.'' [Online]. Available:
 \url{https://github.com/openhwgroup/core-v-verif}
 \bibitem{coatcheck} D.~Lustig \emph{et al.}, ``COATCheck: Verifying memory
 ordering at the hardware--OS interface,'' in \emph{ASPLOS}, 2016.
-\bibitem{transform} N.~Manerkar \emph{et al.}, ``TransForm: Formally specifying
-transistency models and synthesizing enhanced litmus tests,'' in \emph{ISCA},
-2018.
+\bibitem{transform} N.~Hossain, C.~Trippel, and M.~Martonosi,
+``TransForm: Formally specifying transistency models and synthesizing enhanced
+litmus tests,'' in \emph{ISCA}, 2020.
 \bibitem{companionB} M.~Timbadiya, ``Testing device-side invalidation ordering
 in an IOMMU at RTL,'' companion paper.
 \bibitem{rtlcheck} Y.~A.~Manerkar \emph{et al.}, ``RTLCheck: Verifying the

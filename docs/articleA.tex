@@ -22,19 +22,21 @@
 
 \begin{abstract}
 The RISC-V IOMMU specification reached version 1.0 in 2024 and the first
-open-source RTL implementations have appeared, but there is no published
-verification methodology for them, and the leading open implementation ships
-with no testbench at all. We report an open, licence-free verification
+open-source RTL implementations have appeared. Verification work on them has
+begun, but no environment for one has been published that a reader can obtain
+and run, and the leading open implementation ships with no testbench in its
+repository. We report an open, licence-free verification
 environment for that IP and an evaluation of what it actually catches. The
 environment drives all four AXI interfaces of the device, serves its
 implicit page-table, command and fault-queue accesses from a memory model,
 and checks every translation against an independent software walker; it is
 1{,}144 lines of SystemVerilog, builds in 2.4~s and runs 56 checks in 5~ms
 using Verilator alone. We evaluate it by injecting eleven semantically
-meaningful IOMMU faults into the RTL. An early suite detected four of nine;
+meaningful IOMMU faults into the RTL. Against that fixed fault set, the core
+functional suite detects six of eleven;
 the survivors identified concrete blind spots --- page-table permission bits,
 reserved-bit encodings and second-stage translation --- and the tests written
-to close them brought detection to eleven of eleven. We report two findings
+to close them bring detection to eleven of eleven. We report two findings
 about the IP: it cannot be linted as published because a dependency is absent,
 and, with the fault queue disabled, eight faulting device accesses leave the
 IOMMU unresponsive and a previously valid translation fails. We also report a
@@ -66,13 +68,20 @@ fault queue. Its own documentation states that the IP ``is not formally
 verified'' and is ``very likely to have bugs.'' It ships no testbench: its
 makefile invokes Verilator in \texttt{--lint-only} mode.
 
-That gap is the subject of this article. There is a substantial literature on
-verifying RISC-V \emph{cores}---random instruction generators, reference-model
-co-simulation, coverage closure~\cite{riscvdv,corevverif}---and a separate
-literature on verifying address-translation \emph{ordering} for CPU
-MMUs~\cite{coatcheck,transform}. We are not aware of published work on
-verifying a RISC-V IOMMU. This article does not propose a new verification
-theory. It reports what it takes to build a usable environment for this class of
+That gap is the subject of this article, and it needs stating precisely,
+because it is not that nobody has verified an IOMMU. Zero-Day Labs and
+10xEngineers reported a collaborative verification effort on this very IP at the
+RISC-V Summit in 2024, citing 85\,\% of coverage targets met and several RTL
+defects found~\cite{zdl10x}; and standalone IOMMU verification with a reference
+model has been published before, for the Elbrus-6 processor~\cite{elbrus}. What
+is missing is different and more mundane: an environment a reader can obtain,
+build and run. The 10xEngineers work is, as far as we can determine, not
+publicly available, and the Elbrus work targets a proprietary device. There is
+also a substantial literature on verifying RISC-V \emph{cores}---random
+instruction generators, reference-model co-simulation, coverage
+closure~\cite{riscvdv,corevverif}---and a separate literature on verifying
+address-translation \emph{ordering} for CPU MMUs~\cite{coatcheck,transform}.
+This article does not propose a new verification theory. It reports what it takes to build a usable environment for this class of
 device, and---more importantly---measures how much of the device's behaviour
 that environment actually exercises, using fault injection rather than assertion
 counts or line coverage.
@@ -84,8 +93,9 @@ counts or line coverage.
       programming, device-request, completion and data-structure interfaces, and
       checks translations against an independent walker.
 \item A fault-injection evaluation with eleven injected IOMMU defects, and the
-      trajectory that matters: an early suite caught four of nine, the survivors
-      named the blind spots, and the resulting tests caught eleven of eleven.
+      ablation that matters: against a fixed set of eleven faults, the core
+      suite catches six, and the tests written to close those gaps catch all
+      eleven.
 \item Two reproducible findings about the IP: it cannot be linted as published,
       and disabling the fault queue lets a faulting device render the IOMMU
       unresponsive.
@@ -128,6 +138,25 @@ generates constrained-random instruction streams and \texttt{core-v-verif}
 provides UVM environments with reference-model co-simulation~\cite{corevverif};
 both target cores, require a commercial simulator for their UVM components, and
 do not address an IOMMU.
+
+IOMMU verification has been attempted before, and we want to be accurate about
+what is new here rather than claim a vacant field. Petrykin \emph{et
+al.}~\cite{elbrus} built a standalone test system and reference model for the
+IOMMU of the Elbrus-6 processor, covering dynamically generated translation
+tables and two-level translation---close in intent to what we report, on a
+proprietary device, with no artifact available. Closer still, Zero-Day Labs and
+10xEngineers presented a collaborative verification effort on the very IP we
+target at the RISC-V Summit in 2024~\cite{zdl10x}, reporting 85\,\% of coverage
+targets met and several RTL defects and design issues found. We could not locate
+a public repository for that environment.
+
+Our contribution is therefore narrower than ``the first verification of a RISC-V
+IOMMU,'' and we do not claim that. It is an environment that is open, builds
+with free tools, runs in seconds, and reproduces every number in this article
+from a single command---together with a measurement, by fault injection, of what
+it would and would not have caught. Where the 10xEngineers effort reports
+coverage, we deliberately report detection instead, for the reason set out in
+Section~VII.
 
 Address translation has been studied from the ordering side. COATCheck models
 memory ordering at the hardware--OS interface including translation
@@ -357,8 +386,9 @@ M11 & invalidate-all clears only the first entry & yes \\
 \begin{figure}[!t]
 \centering
 \includegraphics[width=\columnwidth]{figures/figA2_mutation.pdf}
-\caption{Detection as the suite grew. The surviving faults named the blind
-spots; the tests written to close them are what raised detection.}
+\caption{Detection measured against a fixed set of eleven faults. The suites
+are nested, so this is an ablation rather than a history. Level~3 adds no
+detection, which reflects the composition of the fault set.}
 \label{fig:mut}
 \end{figure}
 
@@ -367,19 +397,54 @@ suite is rebuilt and rerun, and a fault counts as detected if any check fails.
 The faults are chosen to be semantically meaningful rather than syntactic: each
 corresponds to an omission a designer could plausibly make.
 
-Table~\ref{tab:mutants} gives the final result, eleven of eleven. The trajectory
-in Fig.~\ref{fig:mut} is the more useful result. The first suite of 34 checks
-detected four of nine usable faults. The survivors were not random: every
-page-table permission fault survived, because our tests always constructed
-entries with the accessed, dirty and user bits set; the reserved-bit fault
-survived because we never set reserved bits; and the second-stage fault survived
-because every test left the second stage in \texttt{Bare} mode. Writing tests
-for those five behaviours raised detection to eleven of eleven, and added the
-two-stage translation tests the environment had been missing entirely.
+Table~\ref{tab:mutants} gives the final result, eleven of eleven.
 
-This is the argument for evaluating an environment this way. All 34 original
-checks passed on the unmodified RTL, and would have passed on an RTL missing
-every page-table permission check.
+That single number says little on its own, and the way it was reached is easy to
+report misleadingly. The suite grew in stages, and so did the fault set; quoting
+detection at each stage against the fault set as it then stood would move the
+denominator and compare nothing. We therefore fix the fault set at the final
+eleven and re-measure every stage of the suite against all of them. The stages
+are nested, so this is an ablation rather than a history: level~1 is the core
+functional suite, level~2 adds the permission and second-stage tests, level~3
+adds the ordering, scope and concurrency tests.
+
+\begin{table}[!t]
+\caption{Detection against a fixed set of eleven faults}
+\label{tab:ablation}
+\centering\footnotesize
+\begin{tabular}{@{}clcc@{}}
+\toprule
+Level & Suite & Checks & Detected \\
+\midrule
+1 & core functional                        & 36 & 6/11 \\
+2 & \quad + permission, second stage       & 46 & 11/11 \\
+3 & \quad + ordering, scope, concurrency   & 56 & 11/11 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+Table~\ref{tab:ablation} reports it. The core suite detects six of the eleven,
+and the five it misses are not random: every page-table permission fault
+survives, because the core tests always construct entries with the accessed,
+dirty and user bits set; the reserved-bit fault survives because they never set
+reserved bits; and the second-stage fault survives because they leave the second
+stage in \texttt{Bare} mode. Adding tests for those five behaviours detects all
+eleven.
+
+The third row is the honest and less comfortable one. The ordering, scope and
+concurrency tests---ten further checks, and the subject of a companion
+study~\cite{companionB}---raise detection by nothing. We read this as a
+statement about the fault set rather than about those tests. Only two of the
+eleven faults concern invalidation at all, and both are caught by the core
+suite; a set containing faults that break ordering specifically, such as a fence
+that reports completion before a preceding invalidation has retired, would
+separate level~3 from level~2. A mutation score measures a suite against the
+faults one thought to write, and this is what that limitation looks like when it
+shows up in one's own data.
+
+This is still the argument for evaluating an environment this way. All 36
+level-1 checks passed on the unmodified RTL, and would have passed on an RTL
+missing every page-table permission check.
 
 \section{Findings}
 
@@ -493,6 +558,12 @@ environment and runs the suite; a second reproduces the fault-injection table.
 \begin{thebibliography}{9}
 \bibitem{rviommu} Zero-Day Labs, ``RISC-V IOMMU IP,'' commit \texttt{18ad30a}.
 [Online]. Available: \url{https://github.com/zero-day-labs/riscv-iommu}
+\bibitem{zdl10x} M.~Rodriguez (Zero-Day Labs) and S.~Waheed (10xEngineers),
+``Open-source commercial-grade RISC-V IOMMU with verification,'' RISC-V Summit
+North America, 2024.
+\bibitem{elbrus} A.~A.~Petrykin, I.~A.~Stotland, and A.~N.~Meshkov, ``Standalone
+verification of IOMMU with virtualization supporting,'' \emph{Proc. Institute
+for System Programming of the RAS}, vol.~31, no.~3, pp.~77--84, 2019.
 \bibitem{riscvdv} CHIPS Alliance, ``riscv-dv: random instruction generator for
 RISC-V processor verification.'' [Online]. Available:
 \url{https://github.com/chipsalliance/riscv-dv}
@@ -501,9 +572,9 @@ RISC-V processor verification.'' [Online]. Available:
 \bibitem{coatcheck} D.~Lustig, G.~Sethi, M.~Martonosi, and A.~Bhattacharjee,
 ``COATCheck: Verifying memory ordering at the hardware--OS interface,'' in
 \emph{ASPLOS}, 2016.
-\bibitem{transform} N.~Manerkar, D.~Lustig, M.~Martonosi, and A.~Bhattacharjee,
+\bibitem{transform} N.~Hossain, C.~Trippel, and M.~Martonosi,
 ``TransForm: Formally specifying transistency models and synthesizing enhanced
-litmus tests,'' in \emph{ISCA}, 2018.
+litmus tests,'' in \emph{ISCA}, 2020.
 \bibitem{companionB} M.~Timbadiya, ``Device-side invalidation ordering: testing
 IOMMU translation caches at RTL,'' companion article.
 \bibitem{rtlcheck} Y.~A.~Manerkar, D.~Lustig, M.~Martonosi, and M.~Pellauer,

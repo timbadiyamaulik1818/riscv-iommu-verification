@@ -29,9 +29,10 @@ stale cached translation after that wait returns, the device writes memory that
 now belongs to someone else. Translation-aware memory ordering has been studied
 for CPU MMUs and checked against processor RTL, but we are not aware of work
 that tests this obligation on the device side against IOMMU hardware. We define
-five ordering properties for translation-cache invalidation---staleness
+six ordering properties for translation-cache invalidation---staleness
 permitted before invalidation, effectiveness, scope precision, scope
-containment, and completion ordering---realise them as executable schedules over
+containment, completion ordering, and completion ordering under concurrent
+traffic---realise them as executable schedules over
 an IOMMU's command interface, and run them against an open RISC-V IOMMU,
 including a case with twenty-four device transactions in flight across the
 invalidation. All hold. To show the tests discriminate, we inject two
@@ -70,7 +71,9 @@ RTL satisfies the axioms those models assume~\cite{rtlcheck,realitycheck,qed}.
 All of this concerns a processor's translation hardware. The device side---an
 IOMMU's caches, the command queue that invalidates them, the fence that reports
 completion---has not, to our knowledge, been tested against hardware, and the
-open RISC-V IOMMU implementations ship no tests for it.
+the verification efforts that exist for these
+devices~\cite{zdl10x,elbrus} report functional coverage rather than ordering
+under invalidation.
 
 The failure is also hard to catch anywhere else. It is a translation that should
 not have been produced, and translations are not observable from software: the
@@ -78,7 +81,7 @@ device sees data, not addresses, and by the time the wrong data surfaces the
 page has been reused. The property is testable where translations are visible,
 which is at RTL.
 
-\textbf{Contributions.} (i) Five ordering properties for IOMMU
+\textbf{Contributions.} (i) Six ordering properties for IOMMU
 translation-cache invalidation, stated so each is decided by observing the
 completion port. (ii) An executable realisation against an open RISC-V IOMMU,
 including invalidation with traffic in flight. (iii) Fault injection showing the
@@ -116,8 +119,10 @@ IOMMU may answer from its cache; after it, it may not.}
 \label{fig:order}
 \end{figure*}
 
-Each property is decided by observing the physical address the IOMMU emits for a
-device transaction, so each is testable without internal visibility.
+The six are P1 through P5 together with P5$'$, a variant of P5 that must hold
+under concurrent traffic. Each is decided by observing the physical address the
+IOMMU emits for a device transaction, so each is testable without internal
+visibility.
 
 \textbf{P1 (staleness permitted).} With a page-table entry modified and no
 invalidation issued, a transaction may be answered with the old translation.
@@ -229,10 +234,12 @@ Six checks fail, P2 among them.
 
 The second makes an unscoped invalidation clear only the first IOTLB entry,
 leaving the rest stale---the shape of a real partial-flush bug. Four checks
-catch it. A suite that invalidated and rechecked a single page would have passed
-it, because the page it checked would be the entry that was cleared; the
-multi-page form of P2 is the only thing separating a suite that catches this
-from one that does not. Under P5$'$ the same defect produces nineteen stale
+catch it. Our first account of why was wrong, and the correction is the
+interesting part: we assumed a single-page test would miss the defect, but it
+catches it, because the page that test uses happens not to occupy the surviving
+entry. That is luck. Move the address so it lands in entry zero and the defect
+goes unseen. The multi-page form does not add detection the single-page form
+lacks; it removes the dependence on where an address happens to land. Under P5$'$ the same defect produces nineteen stale
 translations out of nineteen post-fence transactions (Fig.~\ref{fig:conc}, lower
 row): once the surviving entry is the one the device is using, every transaction
 after the fence is wrong.
@@ -300,7 +307,7 @@ runs the suite, and reproduces the injected-defect results.
 \section{Conclusion}
 The ordering obligation an IOMMU owes to an operating system's unmap path is
 testable cheaply against RTL, and it is not covered by CPU-side work on
-translation-aware ordering. Five properties, expressed as schedules over the
+translation-aware ordering. Six properties, expressed as schedules over the
 command interface and decided at the completion port, pin the boundary from both
 sides. An open RISC-V IOMMU satisfies all of them, including under concurrent
 traffic, and two injected invalidation defects are caught. Its fence, however,
@@ -315,19 +322,28 @@ peripherals,'' in \emph{NDSS}, 2019.
 \bibitem{coatcheck} D.~Lustig, G.~Sethi, M.~Martonosi, and A.~Bhattacharjee,
 ``COATCheck: Verifying memory ordering at the hardware--OS interface,'' in
 \emph{ASPLOS}, 2016.
-\bibitem{transform} N.~Manerkar, D.~Lustig, M.~Martonosi, and A.~Bhattacharjee,
+\bibitem{transform} N.~Hossain, C.~Trippel, and M.~Martonosi,
 ``TransForm: Formally specifying transistency models and synthesizing enhanced
-litmus tests,'' in \emph{ISCA}, 2018.
+litmus tests,'' in \emph{ISCA}, 2020.
 \bibitem{rtlcheck} Y.~A.~Manerkar, D.~Lustig, M.~Martonosi, and M.~Pellauer,
 ``RTLCheck: Verifying the memory consistency of RTL designs,'' in \emph{MICRO},
 2017.
 \bibitem{realitycheck} Y.~A.~Manerkar, D.~Lustig, and M.~Martonosi,
 ``RealityCheck: Bringing modularity, hierarchy and abstraction to automated
 microarchitectural memory consistency verification,'' arXiv:2003.04892, 2020.
-\bibitem{qed} ``QED: Scalable verification of hardware memory consistency,''
+\bibitem{qed} G.~Ravi, X.~Qiu, M.~Thottethodi, and T.~N.~Vijaykumar,
+``QED: Scalable verification of hardware memory consistency,''
 arXiv:2404.03113, 2024.
 \bibitem{iotlb} N.~Amit, M.~Ben-Yehuda, and B.-A.~Yassour, ``IOMMU: Strategies
-for mitigating the IOTLB bottleneck,'' in \emph{WIOSCA}, 2010.
+for mitigating the IOTLB bottleneck,'' in \emph{Workshop on Interaction between
+Operating Systems and Computer Architecture (WIOSCA)}, ISCA, 2010; published in
+\emph{LNCS} 6161, Springer, 2012.
+\bibitem{zdl10x} M.~Rodriguez (Zero-Day Labs) and S.~Waheed (10xEngineers),
+``Open-source commercial-grade RISC-V IOMMU with verification,'' RISC-V Summit
+North America, 2024.
+\bibitem{elbrus} A.~A.~Petrykin, I.~A.~Stotland, and A.~N.~Meshkov, ``Standalone
+verification of IOMMU with virtualization supporting,'' \emph{Proc. Institute
+for System Programming of the RAS}, vol.~31, no.~3, pp.~77--84, 2019.
 \bibitem{rviommu} Zero-Day Labs, ``RISC-V IOMMU IP,'' commit \texttt{18ad30a}.
 [Online]. Available: \url{https://github.com/zero-day-labs/riscv-iommu}
 \bibitem{companion} M.~Timbadiya, ``Verifying the RISC-V IOMMU: an open

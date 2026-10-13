@@ -43,7 +43,7 @@ def inc_for(ipdir):
         d.append(os.path.join(ipdir, sub))
     return ['-I'+x for x in d]
 
-def run_suite(ipdir, mdir, tag):
+def run_suite(ipdir, mdir, tag, lvl=3):
     obj = os.path.join(mdir, 'obj')
     os.makedirs(obj, exist_ok=True)
     cmd = (['verilator','--binary','--timing','-j','8','--top-module','tb_iommu',
@@ -53,7 +53,8 @@ def run_suite(ipdir, mdir, tag):
     exe = os.path.join(obj,'tb')
     if not os.path.exists(exe):
         return None, 'BUILD_FAIL', (b.stderr or '')[-300:]
-    r = subprocess.run([exe], capture_output=True, text=True, cwd=ROOT, timeout=600)
+    r = subprocess.run([exe, f'+SUITE={lvl}'], capture_output=True, text=True,
+                       cwd=ROOT, timeout=600)
     m = re.search(r'===\s*(\d+) passed, (\d+) failed', r.stdout)
     if not m:
         return None, 'NO_RESULT', r.stdout[-300:]

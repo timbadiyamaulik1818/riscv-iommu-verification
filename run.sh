@@ -29,6 +29,12 @@ verilator --binary --timing -j 8 --top-module tb_iommu --timescale 1ns/1ps \
 echo "==> running the suite"
 "$OBJ/tb" | tee "$ROOT/results/suite.txt"
 
+if [ "${1:-}" = "--ablate" ]; then
+  echo "==> fixed-fault-set ablation (3 suite levels x 11 faults; ~15 minutes)"
+  python3 "$ROOT/tools/ablation.py"
+  cat "$ROOT/results/ablation.txt"
+fi
+
 if [ "${1:-}" = "--mutate" ]; then
   echo "==> fault injection (rebuilds the design once per defect; several minutes)"
   python3 "$ROOT/tools/mutate.py"
@@ -38,4 +44,5 @@ fi
 echo
 echo "suite  -> results/suite.txt"
 [ "${1:-}" = "--mutate" ] && echo "defects-> results/mutation.txt"
+[ "${1:-}" = "--ablate" ] && echo "ablation-> results/ablation.txt"
 exit 0

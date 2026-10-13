@@ -1,5 +1,5 @@
 
-=== RISC-V IOMMU verification environment ===
+=== RISC-V IOMMU verification environment (suite level 3) ===
   PASS  T1 capabilities.version readable               caps[7:0]=0x10 (spec v1.0 => 0x10)
   PASS  T2 ddtp programmed to 1LVL before traffic      ddtp=0x0000000020004002 busy=0
   PASS  T2 device read completes (1LVL)                rresp=0
@@ -61,7 +61,7 @@
 
 === 56 passed, 0 failed, 2 known issue(s) ===
 
-- /Users/mauliktimbadiya/dev/riscv-iommu-dv/tb/tb_iommu.sv:1135: Verilog $finish
+- /Users/mauliktimbadiya/dev/riscv-iommu-dv/tb/tb_iommu.sv:1150: Verilog $finish
 - S i m u l a t i o n   R e p o r t: Verilator 5.052 2026-09-05
-- Verilator: $finish at 371us; walltime 0.024 s; speed 15.731 ms/s
-- Verilator: cpu 0.024 s on 1 threads; allocated 3 MB
+- Verilator: $finish at 371us; walltime 0.032 s; speed 11.572 ms/s
+- Verilator: cpu 0.032 s on 1 threads; allocated 3 MB
